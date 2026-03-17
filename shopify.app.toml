@@ -1,0 +1,22 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "66f7d7ea1fa9b3cebdf0522970883bfe"
+name = "TSH Business Growth Quiz"
+application_url = "https://example.com"
+embedded = true
+
+[webhooks]
+api_version = "2026-01"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = ""
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [ ]
+[app_proxy]
+url = "https://sedimentological-crystle-imperceptibly.ngrok-free.dev"
+subpath = "tsh-growth"
+prefix = "apps"
