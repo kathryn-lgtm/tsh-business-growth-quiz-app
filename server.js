@@ -9,7 +9,7 @@ app.use(express.json());
 
 /**
  * MAP YOUR QUIZ ANSWERS TO CLEAN INTERNAL VALUES
- * Update the left-hand text here if your exact quiz answer wording is different.
+ * Exact matches still work first, but some fields also have flexible matching.
  */
 const STAGE_MAP = {
   "I have an idea but haven’t started yet": "idea",
@@ -19,17 +19,6 @@ const STAGE_MAP = {
   "I am growing but want more traction": "growth",
   "I’m established and ready to scale": "scale",
   "I'm established and ready to scale": "scale"
-};
-
-const BUSINESS_TYPE_MAP = {
-  "I run a service-based business": "service",
-  "I sell products": "product",
-  "I sell physical products": "product", // ✅ ADD THIS
-  "I run a product-based business": "product",
-  "I do both": "hybrid",
-  "I run both a product and service-based business": "hybrid",
-  "I’m building a personal brand or content-led business": "creator",
-  "I'm building a personal brand or content-led business": "creator"
 };
 
 const PATH_MAP = {
@@ -44,11 +33,73 @@ function normalizeStage(rawStage) {
 }
 
 function normalizeBusinessType(rawBusinessType) {
-  return BUSINESS_TYPE_MAP[String(rawBusinessType || "").trim()] || "service";
+  const value = String(rawBusinessType || "").trim().toLowerCase();
+
+  if (!value) {
+    return "service";
+  }
+
+  if (
+    value.includes("both") ||
+    (value.includes("product") && value.includes("service")) ||
+    value.includes("hybrid")
+  ) {
+    return "hybrid";
+  }
+
+  if (
+    value.includes("physical product") ||
+    value.includes("sell products") ||
+    value.includes("product-based") ||
+    value.includes("product based") ||
+    value.includes("products") ||
+    value.includes("product")
+  ) {
+    return "product";
+  }
+
+  if (
+    value.includes("personal brand") ||
+    value.includes("content-led") ||
+    value.includes("content led") ||
+    value.includes("creator")
+  ) {
+    return "creator";
+  }
+
+  if (value.includes("service")) {
+    return "service";
+  }
+
+  return "service";
 }
 
 function normalizePath(rawPath) {
-  return PATH_MAP[String(rawPath || "").trim()] || "clarity";
+  const trimmed = String(rawPath || "").trim();
+
+  if (PATH_MAP[trimmed]) {
+    return PATH_MAP[trimmed];
+  }
+
+  const value = trimmed.toLowerCase();
+
+  if (value.includes("clarity")) {
+    return "clarity";
+  }
+
+  if (value.includes("marketing") || value.includes("visibility")) {
+    return "marketing";
+  }
+
+  if (value.includes("sales") || value.includes("conversion")) {
+    return "sales";
+  }
+
+  if (value.includes("systems") || value.includes("scaling")) {
+    return "systems";
+  }
+
+  return "clarity";
 }
 
 function getProfile({ stage, path }) {
