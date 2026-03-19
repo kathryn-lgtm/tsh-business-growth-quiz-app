@@ -75,11 +75,15 @@ async function createCustomerInShopify(payload) {
       `,
       variables: {
         input: {
-          firstName: name || "Quiz Lead",
-          email: email,
-          tags: tags
-        }
-      }
+  firstName: name || "Quiz Lead",
+  email: email,
+  tags: tags,
+  emailMarketingConsent: {
+    marketingState: "SUBSCRIBED",
+    marketingOptInLevel: "SINGLE_OPT_IN",
+    consentUpdatedAt: new Date().toISOString()
+  }
+}
     })
   });
 
