@@ -24,6 +24,7 @@ const STAGE_MAP = {
 const BUSINESS_TYPE_MAP = {
   "I run a service-based business": "service",
   "I sell products": "product",
+  "I sell physical products": "product", // ✅ ADD THIS
   "I run a product-based business": "product",
   "I do both": "hybrid",
   "I run both a product and service-based business": "hybrid",
