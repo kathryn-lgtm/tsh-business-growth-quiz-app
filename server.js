@@ -37,6 +37,62 @@ async function getShopifyAccessToken() {
   return data.access_token;
 }
 
+async function subscribeCustomer(storeDomain, accessToken, customerId) {
+  const response = await fetch(`https://${storeDomain}/admin/api/2026-01/graphql.json`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Shopify-Access-Token": accessToken
+    },
+    body: JSON.stringify({
+      query: `
+        mutation customerEmailMarketingConsentUpdate($input: CustomerEmailMarketingConsentUpdateInput!) {
+          customerEmailMarketingConsentUpdate(input: $input) {
+            customer {
+              id
+              emailMarketingConsent {
+                marketingState
+                marketingOptInLevel
+              }
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+      `,
+      variables: {
+        input: {
+          customerId: customerId,
+          emailMarketingConsent: {
+            marketingState: "SUBSCRIBED",
+            marketingOptInLevel: "SINGLE_OPT_IN",
+            consentUpdatedAt: new Date().toISOString()
+          }
+        }
+      }
+    })
+  });
+
+  const data = await response.json();
+
+  console.log("🔔 CONSENT RESPONSE:", JSON.stringify(data, null, 2));
+
+  if (!response.ok) {
+    throw new Error(`Shopify consent HTTP error: ${JSON.stringify(data)}`);
+  }
+
+  const consentErrors =
+    data?.data?.customerEmailMarketingConsentUpdate?.userErrors || [];
+
+  if (consentErrors.length) {
+    throw new Error(`Shopify consent userErrors: ${JSON.stringify(consentErrors)}`);
+  }
+
+  return data?.data?.customerEmailMarketingConsentUpdate?.customer;
+}
+
 async function createCustomerInShopify(payload) {
   const storeDomain = process.env.SHOPIFY_STORE_DOMAIN;
   const accessToken = await getShopifyAccessToken();
@@ -50,7 +106,6 @@ async function createCustomerInShopify(payload) {
     result?.primary_pathway ? `Primary Path: ${result.primary_pathway}` : null
   ].filter(Boolean);
 
-  // 1) Create customer first
   const createResponse = await fetch(`https://${storeDomain}/admin/api/2026-01/graphql.json`, {
     method: "POST",
     headers: {
@@ -97,71 +152,13 @@ async function createCustomerInShopify(payload) {
 
   const customer = createData?.data?.customerCreate?.customer;
   if (!customer?.id) {
+    console.error("❌ No customer returned:", JSON.stringify(createData, null, 2));
     throw new Error(`Shopify customerCreate returned no customer ID: ${JSON.stringify(createData)}`);
   }
 
-  // 2) Then explicitly subscribe them to email marketing
-  const consentResponse = await fetch(`https://${storeDomain}/admin/api/2026-01/graphql.json`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Shopify-Access-Token": accessToken
-    },
-    body: JSON.stringify({
-      query: `
-        mutation customerEmailMarketingConsentUpdate($input: CustomerEmailMarketingConsentUpdateInput!) {
-          customerEmailMarketingConsentUpdate(input: $input) {
-            customer {
-              id
-            }
-            userErrors {
-              field
-              message
-            }
-          }
-        }
-      `,
-      variables: {
-        input: {
-          customerId: customer.id,
-          emailMarketingConsent: {
-            marketingState: "SUBSCRIBED",
-            marketingOptInLevel: "SINGLE_OPT_IN",
-            consentUpdatedAt: new Date().toISOString()
-          }
-        }
-      }
-    })
-  });
-
-  const consentData = await consentResponse.json();
-
-  if (!consentResponse.ok) {
-    throw new Error(`Shopify consent HTTP error: ${JSON.stringify(consentData)}`);
-  }
-
-  const consentErrors = consentData?.data?.customerEmailMarketingConsentUpdate?.userErrors || [];
-  if (consentErrors.length) {
-    throw new Error(`Shopify consent userErrors: ${JSON.stringify(consentErrors)}`);
-  }
+  await subscribeCustomer(storeDomain, accessToken, customer.id);
 
   return customer;
-}
-    })
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(`Shopify HTTP error: ${JSON.stringify(data)}`);
-  }
-
-  const userErrors = data?.data?.customerCreate?.userErrors || [];
-  if (userErrors.length) {
-    throw new Error(`Shopify userErrors: ${JSON.stringify(userErrors)}`);
-  }
-
-  return data?.data?.customerCreate?.customer;
 }
 
 app.get("/", (req, res) => {
