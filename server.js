@@ -50,7 +50,8 @@ async function createCustomerInShopify(payload) {
     result?.primary_pathway ? `Primary Path: ${result.primary_pathway}` : null
   ].filter(Boolean);
 
-  const response = await fetch(`https://${storeDomain}/admin/api/2026-01/graphql.json`, {
+  // 1) Create customer first
+  const createResponse = await fetch(`https://${storeDomain}/admin/api/2026-01/graphql.json`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -75,14 +76,76 @@ async function createCustomerInShopify(payload) {
       `,
       variables: {
         input: {
-  firstName: name || "Quiz Lead",
-  email: email,
-  tags: tags,
-  emailMarketingConsent: {
-    marketingState: "SUBSCRIBED",
-    marketingOptInLevel: "SINGLE_OPT_IN",
-    consentUpdatedAt: new Date().toISOString()
+          firstName: name || "Quiz Lead",
+          email: email,
+          tags: tags
+        }
+      }
+    })
+  });
+
+  const createData = await createResponse.json();
+
+  if (!createResponse.ok) {
+    throw new Error(`Shopify customerCreate HTTP error: ${JSON.stringify(createData)}`);
   }
+
+  const createErrors = createData?.data?.customerCreate?.userErrors || [];
+  if (createErrors.length) {
+    throw new Error(`Shopify customerCreate userErrors: ${JSON.stringify(createErrors)}`);
+  }
+
+  const customer = createData?.data?.customerCreate?.customer;
+  if (!customer?.id) {
+    throw new Error(`Shopify customerCreate returned no customer ID: ${JSON.stringify(createData)}`);
+  }
+
+  // 2) Then explicitly subscribe them to email marketing
+  const consentResponse = await fetch(`https://${storeDomain}/admin/api/2026-01/graphql.json`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Shopify-Access-Token": accessToken
+    },
+    body: JSON.stringify({
+      query: `
+        mutation customerEmailMarketingConsentUpdate($input: CustomerEmailMarketingConsentUpdateInput!) {
+          customerEmailMarketingConsentUpdate(input: $input) {
+            customer {
+              id
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+      `,
+      variables: {
+        input: {
+          customerId: customer.id,
+          emailMarketingConsent: {
+            marketingState: "SUBSCRIBED",
+            marketingOptInLevel: "SINGLE_OPT_IN",
+            consentUpdatedAt: new Date().toISOString()
+          }
+        }
+      }
+    })
+  });
+
+  const consentData = await consentResponse.json();
+
+  if (!consentResponse.ok) {
+    throw new Error(`Shopify consent HTTP error: ${JSON.stringify(consentData)}`);
+  }
+
+  const consentErrors = consentData?.data?.customerEmailMarketingConsentUpdate?.userErrors || [];
+  if (consentErrors.length) {
+    throw new Error(`Shopify consent userErrors: ${JSON.stringify(consentErrors)}`);
+  }
+
+  return customer;
 }
     })
   });
