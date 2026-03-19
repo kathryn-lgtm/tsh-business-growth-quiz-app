@@ -7,6 +7,96 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+/**
+ * MAP YOUR QUIZ ANSWERS TO CLEAN INTERNAL VALUES
+ * Update the left-hand text here if your exact quiz answer wording is different.
+ */
+const STAGE_MAP = {
+  "I have an idea but haven’t started yet": "idea",
+  "I have an idea but haven't started yet": "idea",
+  "I’ve started but it’s inconsistent": "early",
+  "I've started but it's inconsistent": "early",
+  "I am growing but want more traction": "growth",
+  "I’m established and ready to scale": "scale",
+  "I'm established and ready to scale": "scale"
+};
+
+const BUSINESS_TYPE_MAP = {
+  "I run a service-based business": "service",
+  "I sell products": "product",
+  "I run a product-based business": "product",
+  "I do both": "hybrid",
+  "I run both a product and service-based business": "hybrid",
+  "I’m building a personal brand or content-led business": "creator",
+  "I'm building a personal brand or content-led business": "creator"
+};
+
+const PATH_MAP = {
+  "Business Clarity Pathway": "clarity",
+  "Marketing & Visibility Pathway": "marketing",
+  "Sales & Conversion Pathway": "sales",
+  "Systems & Scaling Pathway": "systems"
+};
+
+function normalizeStage(rawStage) {
+  return STAGE_MAP[String(rawStage || "").trim()] || "early";
+}
+
+function normalizeBusinessType(rawBusinessType) {
+  return BUSINESS_TYPE_MAP[String(rawBusinessType || "").trim()] || "service";
+}
+
+function normalizePath(rawPath) {
+  return PATH_MAP[String(rawPath || "").trim()] || "clarity";
+}
+
+function getProfile({ stage, path }) {
+  const normalizedStage = String(stage || "").trim().toLowerCase();
+  const normalizedPath = String(path || "").trim().toLowerCase();
+
+  if (normalizedStage === "idea") {
+    return "start";
+  }
+
+  if (normalizedStage === "early" && normalizedPath === "clarity") {
+    return "start";
+  }
+
+  if (
+    normalizedStage === "early" &&
+    (normalizedPath === "marketing" || normalizedPath === "clarity")
+  ) {
+    return "foundations";
+  }
+
+  if (
+    (normalizedStage === "early" || normalizedStage === "growth") &&
+    normalizedPath === "marketing"
+  ) {
+    return "get-seen";
+  }
+
+  if (normalizedStage === "growth" && normalizedPath === "sales") {
+    return "sales-fix";
+  }
+
+  if (
+    (normalizedStage === "growth" || normalizedStage === "scale") &&
+    normalizedPath === "systems"
+  ) {
+    return "scale-systems";
+  }
+
+  if (
+    normalizedStage === "scale" &&
+    (normalizedPath === "marketing" || normalizedPath === "sales")
+  ) {
+    return "optimise-expand";
+  }
+
+  return "foundations";
+}
+
 async function getShopifyAccessToken() {
   const clientId = process.env.SHOPIFY_CLIENT_ID;
   const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
@@ -99,12 +189,46 @@ async function createCustomerInShopify(payload) {
 
   const { name, email, answers, result } = payload;
 
+  // Raw human-readable values from the quiz
+  const rawStage = answers?.q1 || "";
+  const rawBusinessType = answers?.q2 || "";
+  const rawPrimaryPath = result?.primary_pathway || "";
+
+  // Clean internal values for automation
+  const stage = normalizeStage(rawStage);
+  const businessType = normalizeBusinessType(rawBusinessType);
+  const path = normalizePath(rawPrimaryPath);
+  const profile = getProfile({ stage, path });
+
+  console.log("🧠 PROFILE RESOLUTION:");
+  console.log({
+    rawStage,
+    rawBusinessType,
+    rawPrimaryPath,
+    stage,
+    businessType,
+    path,
+    profile
+  });
+
   const tags = [
     "Quiz Lead",
-    answers?.q1 ? `Stage: ${answers.q1}` : null,
-    answers?.q2 ? `Business Type: ${answers.q2}` : null,
-    result?.primary_pathway ? `Primary Path: ${result.primary_pathway}` : null
+    "source:quiz",
+
+    // Existing readable tags
+    rawStage ? `Stage: ${rawStage}` : null,
+    rawBusinessType ? `Business Type: ${rawBusinessType}` : null,
+    rawPrimaryPath ? `Primary Path: ${rawPrimaryPath}` : null,
+
+    // New machine-friendly tags
+    `stage:${stage}`,
+    `type:${businessType}`,
+    `path:${path}`,
+    `profile:${profile}`
   ].filter(Boolean);
+
+  console.log("🏷️ TAGS GOING TO SHOPIFY:");
+  console.log(tags);
 
   const createResponse = await fetch(`https://${storeDomain}/admin/api/2026-01/graphql.json`, {
     method: "POST",
@@ -158,7 +282,13 @@ async function createCustomerInShopify(payload) {
 
   await subscribeCustomer(storeDomain, accessToken, customer.id);
 
-  return customer;
+  return {
+    ...customer,
+    resolvedProfile: profile,
+    resolvedStage: stage,
+    resolvedBusinessType: businessType,
+    resolvedPath: path
+  };
 }
 
 app.get("/", (req, res) => {
