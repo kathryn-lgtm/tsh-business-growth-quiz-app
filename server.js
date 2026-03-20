@@ -14,6 +14,14 @@ app.use(express.json());
 const STAGE_MAP = {
   "I have an idea but haven’t started yet": "idea",
   "I have an idea but haven't started yet": "idea",
+  "I’ve recently launched and I’m finding my feet": "early",
+  "I've recently launched and I'm finding my feet": "early",
+  "I’ve been running my business for less than a year": "early",
+  "I've been running my business for less than a year": "early",
+  "I’ve been in business for 1–3 years": "growth",
+  "I've been in business for 1–3 years": "growth",
+  "My business is established and I’m ready to grow further": "scale",
+  "My business is established and I'm ready to grow further": "scale",
   "I’ve started but it’s inconsistent": "early",
   "I've started but it's inconsistent": "early",
   "I am growing but want more traction": "growth",
@@ -67,7 +75,7 @@ function normalizeBusinessType(rawBusinessType) {
     return "creator";
   }
 
-  if (value.includes("service")) {
+  if (value.includes("service") || value.includes("retail")) {
     return "service";
   }
 
@@ -107,11 +115,11 @@ function getProfile({ stage, path }) {
   const normalizedPath = String(path || "").trim().toLowerCase();
 
   if (normalizedStage === "idea") {
-    return "start";
+    return "get-clear";
   }
 
   if (normalizedStage === "early" && normalizedPath === "clarity") {
-    return "start";
+    return "get-clear";
   }
 
   if (
@@ -147,6 +155,128 @@ function getProfile({ stage, path }) {
   }
 
   return "foundations";
+}
+
+/**
+ * SUBTYPE LOGIC
+ * Uses quiz answers to add a more personal layer inside each main segment.
+ */
+function getSubtype({ path, answers }) {
+  const normalizedPath = String(path || "").trim().toLowerCase();
+
+  const q7 = String(answers?.q7 || "").trim().toLowerCase();
+  const q8 = String(answers?.q8 || "").trim().toLowerCase();
+  const q9 = String(answers?.q9 || "").trim().toLowerCase();
+  const q10 = String(answers?.q10 || "").trim().toLowerCase();
+  const q11 = String(answers?.q11 || "").trim().toLowerCase();
+  const q2 = String(answers?.q2 || "").trim().toLowerCase();
+
+  // SEGMENT 1: GET CLEAR
+  if (normalizedPath === "clarity") {
+    if (
+      q8.includes("clearer plan") ||
+      q8.includes("not sure what marketing to focus on") ||
+      q7.includes("clear growth plan")
+    ) {
+      return "scattered";
+    }
+
+    if (
+      q9.includes("workshops") ||
+      q2.includes("still working that out")
+    ) {
+      return "overthinker";
+    }
+
+    if (
+      q11.includes("exploring") ||
+      q10.includes("very limited")
+    ) {
+      return "doubter";
+    }
+
+    return "general";
+  }
+
+  // SEGMENT 2: GET SEEN
+  if (normalizedPath === "marketing") {
+    if (
+      q7.includes("being seen by more people")
+    ) {
+      return "invisible";
+    }
+
+    if (
+      q8.includes("branding or messaging isn’t clear") ||
+      q8.includes("branding or messaging isn't clear")
+    ) {
+      return "messaging";
+    }
+
+    if (
+      q10.includes("very limited") ||
+      q10.includes("around 5 hours")
+    ) {
+      return "inconsistent";
+    }
+
+    return "general";
+  }
+
+  // SEGMENT 3: SELL BETTER
+  if (normalizedPath === "sales") {
+    if (
+      q7.includes("increasing sales or bookings") &&
+      q9.includes("done-for-you support")
+    ) {
+      return "leaky";
+    }
+
+    if (
+      q9.includes("branding") ||
+      q9.includes("content")
+    ) {
+      return "quiet";
+    }
+
+    if (
+      q8.includes("more customers, leads or sales")
+    ) {
+      return "undervalued";
+    }
+
+    return "general";
+  }
+
+  // SEGMENT 4: SCALE SYSTEMS
+  if (normalizedPath === "systems") {
+    if (
+      q8.includes("doing too much myself") ||
+      q8.includes("need support")
+    ) {
+      return "bottleneck";
+    }
+
+    if (
+      q8.includes("don’t have enough time") ||
+      q8.includes("don't have enough time") ||
+      q10.includes("very limited") ||
+      q10.includes("around 5 hours")
+    ) {
+      return "busy";
+    }
+
+    if (
+      q11.includes("serious about scaling") ||
+      q11.includes("ready to actively grow")
+    ) {
+      return "plateau";
+    }
+
+    return "general";
+  }
+
+  return "general";
 }
 
 async function getShopifyAccessToken() {
@@ -251,6 +381,7 @@ async function createCustomerInShopify(payload) {
   const businessType = normalizeBusinessType(rawBusinessType);
   const path = normalizePath(rawPrimaryPath);
   const profile = getProfile({ stage, path });
+  const subtype = getSubtype({ path, answers });
 
   console.log("🧠 PROFILE RESOLUTION:");
   console.log({
@@ -260,7 +391,13 @@ async function createCustomerInShopify(payload) {
     stage,
     businessType,
     path,
-    profile
+    profile,
+    subtype,
+    q7: answers?.q7 || "",
+    q8: answers?.q8 || "",
+    q9: answers?.q9 || "",
+    q10: answers?.q10 || "",
+    q11: answers?.q11 || ""
   });
 
   const tags = [
@@ -276,7 +413,8 @@ async function createCustomerInShopify(payload) {
     `stage:${stage}`,
     `type:${businessType}`,
     `path:${path}`,
-    `profile:${profile}`
+    `profile:${profile}`,
+    `subtype:${subtype}`
   ].filter(Boolean);
 
   console.log("🏷️ TAGS GOING TO SHOPIFY:");
@@ -339,7 +477,8 @@ async function createCustomerInShopify(payload) {
     resolvedProfile: profile,
     resolvedStage: stage,
     resolvedBusinessType: businessType,
-    resolvedPath: path
+    resolvedPath: path,
+    resolvedSubtype: subtype
   };
 }
 
