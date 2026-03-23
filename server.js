@@ -162,31 +162,32 @@ function getProfile({ stage, path }) {
  * SUBTYPE LOGIC
  * Uses quiz answers to add a more personal layer inside each main segment.
  */
-function getSubtype({ path, answers }) {
+function getSubtype({ path, answers, profile }) {
   const normalizedPath = String(path || "").trim().toLowerCase();
+  const normalizedProfile = String(profile || "").trim().toLowerCase();
 
+  const q2 = String(answers?.q2 || "").trim().toLowerCase();
   const q7 = String(answers?.q7 || "").trim().toLowerCase();
   const q8 = String(answers?.q8 || "").trim().toLowerCase();
   const q9 = String(answers?.q9 || "").trim().toLowerCase();
   const q10 = String(answers?.q10 || "").trim().toLowerCase();
   const q11 = String(answers?.q11 || "").trim().toLowerCase();
-  const q2 = String(answers?.q2 || "").trim().toLowerCase();
 
   // SEGMENT 1: GET CLEAR
-  if (normalizedPath === "clarity") {
+  if (normalizedProfile === "get-clear" || normalizedPath === "clarity") {
+    if (
+      q9.includes("workshops") ||
+      q2.includes("still working that out")
+    ) {
+      return "overthinker";
+    }
+
     if (
       q8.includes("clearer plan") ||
       q8.includes("not sure what marketing to focus on") ||
       q7.includes("clear growth plan")
     ) {
       return "scattered";
-    }
-
-    if (
-      q9.includes("workshops") ||
-      q2.includes("still working that out")
-    ) {
-      return "overthinker";
     }
 
     if (
@@ -199,8 +200,30 @@ function getSubtype({ path, answers }) {
     return "general";
   }
 
-  // SEGMENT 2: GET SEEN
-  if (normalizedPath === "marketing") {
+  // SEGMENT 2: FOUNDATIONS
+  if (normalizedProfile === "foundations") {
+    if (
+      q8.includes("clearer plan") ||
+      q8.includes("not sure what marketing to focus on") ||
+      q7.includes("clear growth plan") ||
+      q8.includes("branding or messaging isn't clear") ||
+      q8.includes("branding or messaging isn't clear")
+    ) {
+      return "scattered";
+    }
+
+    if (
+      q10.includes("very limited") ||
+      q10.includes("around 5 hours")
+    ) {
+      return "inconsistent";
+    }
+
+    return "general";
+  }
+
+  // SEGMENT 3: GET SEEN
+  if (normalizedProfile === "get-seen" || normalizedPath === "marketing") {
     if (
       q7.includes("being seen by more people")
     ) {
@@ -224,8 +247,8 @@ function getSubtype({ path, answers }) {
     return "general";
   }
 
-  // SEGMENT 3: SELL BETTER
-  if (normalizedPath === "sales") {
+  // SEGMENT 4: SALES FIX
+  if (normalizedProfile === "sales-fix" || normalizedPath === "sales") {
     if (
       q7.includes("increasing sales or bookings") &&
       q9.includes("done-for-you support")
@@ -240,17 +263,15 @@ function getSubtype({ path, answers }) {
       return "quiet";
     }
 
-    if (
-      q8.includes("more customers, leads or sales")
-    ) {
+    if (q8.includes("more customers, leads or sales")) {
       return "undervalued";
     }
 
     return "general";
   }
 
-  // SEGMENT 4: SCALE SYSTEMS
-  if (normalizedPath === "systems") {
+  // SEGMENT 5: SCALE SYSTEMS
+  if (normalizedProfile === "scale-systems" || normalizedPath === "systems") {
     if (
       q8.includes("doing too much myself") ||
       q8.includes("need support")
@@ -275,6 +296,37 @@ function getSubtype({ path, answers }) {
     }
 
     return "general";
+  }
+
+  // SEGMENT 6: MIXED SIGNALS
+  if (normalizedProfile === "mixed-signals") {
+    if (
+      q2.includes("still working that out") ||
+      q11.includes("exploring")
+    ) {
+      return "general-explorer";
+    }
+
+    if (
+      q8.includes("not sure") ||
+      q7.includes("clear growth plan")
+    ) {
+      return "general-split";
+    }
+
+    if (
+      q11.includes("ready to actively grow") ||
+      q11.includes("serious about scaling")
+    ) {
+      return "general-transition";
+    }
+
+    return "general";
+  }
+
+  // SEGMENT 7: OPTIMISE & EXPAND
+  if (normalizedProfile === "optimise-expand") {
+    return "advanced";
   }
 
   return "general";
@@ -382,7 +434,7 @@ async function createCustomerInShopify(payload) {
   const businessType = normalizeBusinessType(rawBusinessType);
   const path = normalizePath(rawPrimaryPath);
   const profile = getProfile({ stage, path });
-  const subtype = getSubtype({ path, answers });
+  const subtype = getSubtype({ path, answers, profile });
 
   console.log("🧠 PROFILE RESOLUTION:");
   console.log({
