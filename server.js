@@ -154,7 +154,8 @@ function getProfile({ stage, path }) {
     return "optimise-expand";
   }
 
-  return "foundations";
+  // 👇 ONLY fallback
+  return "mixed-signals";
 }
 
 /**

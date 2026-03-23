@@ -3,11 +3,11 @@ export function getProfile({ stage, path }) {
   const normalizedPath = String(path || "").trim().toLowerCase();
 
   if (normalizedStage === "idea") {
-    return "start";
+    return "get-clear";
   }
 
   if (normalizedStage === "early" && normalizedPath === "clarity") {
-    return "start";
+    return "get-clear";
   }
 
   if (
@@ -42,5 +42,5 @@ export function getProfile({ stage, path }) {
     return "optimise-expand";
   }
 
-  return "foundations";
+  return "mixed-signals";
 }
