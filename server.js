@@ -275,7 +275,8 @@ function getSubtype({ path, answers, profile }) {
       return "undervalued";
     }
 
-    return "general";
+    // Default for sales-fix — all remaining cases are undervalued
+    return "undervalued";
   }
 
   // SEGMENT 5: SCALE SYSTEMS
