@@ -162,7 +162,13 @@ function getProfile({ stage, path }) {
     return "optimise-expand";
   }
 
-  // 👇 ONLY fallback
+  // Early-stage businesses that arrived via sales or systems path
+  // still need foundations before those fixes will land
+  if (normalizedStage === "early") {
+    return "foundations";
+  }
+
+  // Everything else — genuine mixed signals
   return "mixed-signals";
 }
 
@@ -342,34 +348,6 @@ function getSubtype({ path, answers, profile }) {
     }
 
     return "plateau";
-  }
-
-  // SEGMENT 6: MIXED SIGNALS
-  // Subtypes: general-explorer | general-split | general-transition
-  // Default: general-explorer — still figuring it out
-  if (normalizedProfile === "mixed-signals") {
-    if (
-      q2.includes("still working that out") ||
-      q11.includes("exploring")
-    ) {
-      return "general-explorer";
-    }
-
-    if (
-      q8.includes("not sure") ||
-      q7.includes("clear growth plan")
-    ) {
-      return "general-split";
-    }
-
-    if (
-      q11.includes("ready to actively grow") ||
-      q11.includes("serious about scaling")
-    ) {
-      return "general-transition";
-    }
-
-    return "general-explorer";
   }
 
   // SEGMENT 7: OPTIMISE & EXPAND
