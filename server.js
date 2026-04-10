@@ -182,6 +182,8 @@ function getSubtype({ path, answers, profile }) {
   const q11 = String(answers?.q11 || "").trim().toLowerCase();
 
   // SEGMENT 1: GET CLEAR
+  // Subtypes: overthinker | scattered | doubter
+  // Default: scattered — most clarity-seekers are dealing with too many directions
   if (normalizedProfile === "get-clear" || normalizedPath === "clarity") {
     if (
       q9.includes("workshops") ||
@@ -191,31 +193,33 @@ function getSubtype({ path, answers, profile }) {
     }
 
     if (
-      q8.includes("clearer plan") ||
-      q8.includes("not sure what marketing to focus on") ||
-      q7.includes("clear growth plan")
-    ) {
-      return "scattered";
-    }
-
-    if (
       q11.includes("exploring") ||
       q10.includes("very limited")
     ) {
       return "doubter";
     }
 
-    return "general";
+    if (
+      q8.includes("clearer plan") ||
+      q8.includes("not sure what marketing") ||
+      q8.includes("branding or messaging") ||
+      q7.includes("clear growth plan")
+    ) {
+      return "scattered";
+    }
+
+    return "scattered";
   }
 
   // SEGMENT 2: FOUNDATIONS
+  // Subtypes: scattered | inconsistent
+  // Default: inconsistent — early-stage businesses that don’t match scattered are typically inconsistent
   if (normalizedProfile === "foundations") {
     if (
       q8.includes("clearer plan") ||
-      q8.includes("not sure what marketing to focus on") ||
-      q7.includes("clear growth plan") ||
-      q8.includes("branding or messaging isn't clear") ||
-      q8.includes("branding or messaging isn't clear")
+      q8.includes("not sure what marketing") ||
+      q8.includes("branding or messaging") ||
+      q7.includes("clear growth plan")
     ) {
       return "scattered";
     }
@@ -227,22 +231,25 @@ function getSubtype({ path, answers, profile }) {
       return "inconsistent";
     }
 
-    return "general";
+    return "inconsistent";
   }
 
   // SEGMENT 3: GET SEEN
+  // Subtypes: messaging | invisible | inconsistent
+  // Default: invisible — if you’re in this segment, visibility is the core gap
   if (normalizedProfile === "get-seen" || normalizedPath === "marketing") {
     if (
-      q7.includes("being seen by more people")
+      q8.includes("branding or messaging") ||
+      q7.includes("building a stronger brand")
     ) {
-      return "invisible";
+      return "messaging";
     }
 
     if (
-      q8.includes("branding or messaging isn’t clear") ||
-      q8.includes("branding or messaging isn't clear")
+      q7.includes("being seen by more people") ||
+      q7.includes("getting my first customers")
     ) {
-      return "messaging";
+      return "invisible";
     }
 
     if (
@@ -252,10 +259,12 @@ function getSubtype({ path, answers, profile }) {
       return "inconsistent";
     }
 
-    return "general";
+    return "invisible";
   }
 
   // SEGMENT 4: SALES FIX
+  // Subtypes: leaky | quiet | undervalued
+  // Default: undervalued — the core issue for most sales-fix profiles
   if (normalizedProfile === "sales-fix" || normalizedPath === "sales") {
     if (
       q7.includes("increasing sales or bookings") &&
@@ -275,11 +284,12 @@ function getSubtype({ path, answers, profile }) {
       return "undervalued";
     }
 
-    // Default for sales-fix — all remaining cases are undervalued
     return "undervalued";
   }
 
   // SEGMENT 5: SCALE SYSTEMS
+  // Subtypes: bottleneck | busy | plateau
+  // Default: plateau — if not time-blocked or capacity-blocked, they’ve hit a ceiling
   if (normalizedProfile === "scale-systems" || normalizedPath === "systems") {
     if (
       q8.includes("doing too much myself") ||
@@ -290,7 +300,6 @@ function getSubtype({ path, answers, profile }) {
 
     if (
       q8.includes("don’t have enough time") ||
-      q8.includes("don't have enough time") ||
       q10.includes("very limited") ||
       q10.includes("around 5 hours")
     ) {
@@ -304,10 +313,12 @@ function getSubtype({ path, answers, profile }) {
       return "plateau";
     }
 
-    return "general";
+    return "plateau";
   }
 
   // SEGMENT 6: MIXED SIGNALS
+  // Subtypes: general-explorer | general-split | general-transition
+  // Default: general-explorer — still figuring it out
   if (normalizedProfile === "mixed-signals") {
     if (
       q2.includes("still working that out") ||
@@ -330,7 +341,7 @@ function getSubtype({ path, answers, profile }) {
       return "general-transition";
     }
 
-    return "general";
+    return "general-explorer";
   }
 
   // SEGMENT 7: OPTIMISE & EXPAND
