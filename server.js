@@ -181,6 +181,34 @@ function getSubtype({ path, answers, profile }) {
   const q10 = String(answers?.q10 || "").trim().toLowerCase();
   const q11 = String(answers?.q11 || "").trim().toLowerCase();
 
+  // SEGMENT 6: MIXED SIGNALS — checked first to prevent path-based segments intercepting it
+  // Subtypes: general-explorer | general-split | general-transition
+  // Default: general-explorer — still figuring it out
+  if (normalizedProfile === "mixed-signals") {
+    if (
+      q2.includes("still working that out") ||
+      q11.includes("exploring")
+    ) {
+      return "general-explorer";
+    }
+
+    if (
+      q8.includes("not sure") ||
+      q7.includes("clear growth plan")
+    ) {
+      return "general-split";
+    }
+
+    if (
+      q11.includes("ready to actively grow") ||
+      q11.includes("serious about scaling")
+    ) {
+      return "general-transition";
+    }
+
+    return "general-explorer";
+  }
+
   // SEGMENT 1: GET CLEAR
   // Subtypes: overthinker | scattered | doubter
   // Default: scattered — most clarity-seekers are dealing with too many directions
